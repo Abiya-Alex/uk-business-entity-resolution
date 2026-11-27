@@ -1,0 +1,2 @@
+# Planned experiment: duplicate delivery
+Hypothesis: transactionally inserting a processed job ID prevents duplicate writes. Ingest the same demo CSV twice; compare processed/matches counts and search results before and after. Inspect worker logs. Record timestamp, observed symptoms, expected vs actual, root cause if failure, remediation and retest. Initial SQLite automated test passed; container experiment has not been performed.

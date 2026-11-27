@@ -1,0 +1,2 @@
+# Planned experiment: worker crash
+Stop worker, enqueue a batch, start worker and kill it during processing (`docker compose kill worker`), then start it again. Observe redelivery after visibility timeout and compare job/result counts. To prove crash after commit before acknowledgement, add a controlled test hook on a separate branch. Record actual timeline, impact, root cause, recovery and follow-up. This report is a template, not a completed incident.

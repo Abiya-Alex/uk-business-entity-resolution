@@ -1,0 +1,20 @@
+..............                                                           [100%]
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.5-final-0 ________________
+
+Name                  Stmts   Miss  Cover   Missing
+---------------------------------------------------
+src/__init__.py           0      0   100%
+src/api.py               62      3    95%   31, 34, 36
+src/convert.py           26      2    92%   31-32
+src/db.py                12      1    92%   10
+src/evaluate.py          24      4    83%   15, 26-28
+src/ingest.py            27     27     0%   2-31
+src/matching.py          38      0   100%
+src/profile_data.py      17      1    94%   20
+src/queue.py              7      2    71%   7, 11
+src/sample_pairs.py      34      3    91%   30, 33, 41
+src/worker.py            47     21    55%   27, 32-50, 53
+---------------------------------------------------
+TOTAL                   294     64    78%
+14 passed in 1.64s
