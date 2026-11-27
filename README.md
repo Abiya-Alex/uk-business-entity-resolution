@@ -1,14 +1,14 @@
 # UK Business Entity Resolution Service
 
-Production-style learning project for SDE I interviews. Links Companies House legal entities with FSA trading premises for a compliance analyst. Candidate links are not official verification or proof of legal ownership.
+A local backend engineering portfolio project linking Charity Commission register entries to Companies House company records. It retains the original fictional food-premises fixtures for regression testing. Candidate links are suggestions, not official identity verification.
 
 ## Architecture
+
 ```mermaid
 flowchart LR
- CH[Companies House CSV] --> I[Ingestion]
- FSA[FSA JSON] --> I
+ CH[Companies House API] --> I[Canonical company ingestion]
+ CC[Charity Commission TSV] --> Q[ElasticMQ queue]
  I --> DB[(PostgreSQL)]
- I --> Q[ElasticMQ SQS-compatible queue]
  Q --> W[Matching worker]
  W --> DB
  Q --> DLQ[Dead-letter queue]
@@ -17,48 +17,34 @@ flowchart LR
  P --> G[Grafana]
 ```
 
-## Quick start (Windows PowerShell or any shell with Docker Compose)
-Install Docker Desktop (personal use), Git and Python 3.12. No AWS account or paid API. From the extracted repository:
-```sh
-docker compose up --build -d
-docker compose ps
-docker compose exec api python -m src.ingest data/companies_demo.csv data/fsa_demo.csv
-docker compose logs --tail=50 worker
-```
-Open http://localhost:8000/docs and call GET /business with name ABC and postcode TN9 1AB. Expected synthetic demo result: F1/C1, score 100. Open http://localhost:3001 (default local admin/admin, change when prompted), dashboard Business API. Prometheus: http://localhost:9090. Stop with `docker compose down` (database persists); `docker compose down -v` destroys database volume. Queue is ephemeral in this demo. Never expose these local services to the internet.
+## Quick start
 
-## Local development
+Python 3.12, Git and Docker Compose. Local-only credentials; never expose the services publicly.
+
 ```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m pytest --cov=src --cov-report=term-missing
-.\.venv\Scripts\python.exe -m ruff check .
-.\.venv\Scripts\python.exe -m mypy src
+docker compose up --build -d
+docker compose exec api python -m src.ingest data/companies_demo.csv data/fsa_demo.csv
+python -m ruff check .
+python -m mypy src
+python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=85
 ```
-Linux/macOS: use `python3.12 -m venv .venv` and `.venv/bin/python`.
 
-## Real data
-Optional Windows smoke test: `powershell -ExecutionPolicy Bypass -File smoke-test.ps1` (inspect the script first). See docs/DATA_GUIDE.md for download, regional conversion, labelling and evaluation. Demo records are fictional. Do not commit raw bulk datasets or credentials. Real data metrics are not yet available.
+API: http://localhost:8000/docs; Grafana: http://localhost:3001; Prometheus: http://localhost:9090. See RUNBOOK.md. Do not delete database volumes. See docs/DATA_GUIDE.md for real-data workflows and docs/problem.md for scope.
 
-## Measured results (package creation environment)
-| Metric | Result |
-|---|---|
-| Automated tests | 14 passed (SQLite service tests, matching and converter tests) |
-| Overall Python statement coverage | 78% |
-| Real records processed | Not measured |
-| Precision / recall / F1 | Not measured on real labelled pairs |
-| p95 latency | Not measured |
-| PostgreSQL / ElasticMQ end-to-end | Not run in package creation environment |
-| CI / Ruff / mypy | Not verified in package creation environment |
+## Verified Phase A/B results
 
-Targets: 85%+ coverage, 95%+ auto-match precision, p95 <500 ms under a specified test workload. Targets are not results. See docs/RESULTS.md and replace with actual reproducible measurements.
+- 24 passing tests and 90.32% statement coverage at Phase B completion; Windows and Linux Python 3.12 CI.
+- Synthetic 5,000-company, 20-query workload: 100,000 to 4,000 candidate comparisons (96% reduction), 4,904.782 ms to 127.459 ms, all 20 known candidates retained.
+- SQLite cache benchmark: 10 builds to 1 over 10 unchanged polls.
+- Synthetic PostgreSQL 50,000-row query: 24.421 ms to 0.087 ms, with changed substring-to-prefix semantics.
+- Both expected fictional matches recovered and an unknown business returned no match.
 
-## Design and limits
-- SQS-compatible ElasticMQ is a local emulator, not AWS deployment. Boto3 uses local placeholder credentials.
-- Candidate index uses postcode district or first normalized name token. Common tokens can produce large candidate sets; measure this. The index is rebuilt each poll for simplicity.
-- Score is a weighted heuristic, not a calibrated probability. FSA premises can link to multiple candidate legal entities; ambiguous high scores require further work before real compliance use.
-- Idempotency is transactional for repeated identical payloads. This is a batch snapshot prototype; changed records do not automatically invalidate previous links. For new snapshots use a fresh database or implement versioned reconciliation.
-- Review endpoints are local-only and unauthenticated; no public deployment. Rate limit is per-process, not distributed. Quarantine covers invalid FSA payloads; invalid company rows abort import. Queue is not durable across container removal.
-- Monitoring covers HTTP metrics; worker telemetry can be extended. No real production customers or on-call claims.
+These are single-run measurements under specific synthetic workloads, not production latency or real-world accuracy. See docs/verification and docs/decisions/phase-b-engineering.md. Phase C results are reported separately in docs/RESULTS.md after verification.
 
-See docs/USER_TASKS.md for the tasks that require your participation, docs/ROADMAP.md for daily tickets, RUNBOOK.md for operations and docs/incidents for controlled experiments. This is a generated implementation baseline, not a claim that you personally wrote it or that it is production certified.
+## Evaluation and limitations
+
+Official company numbers provide reference labels; the query matcher does not see them. The corpus includes companies fetched using those labels plus same-postcode distractors, so evaluation is conditional on a controlled pool, not independent nationwide search. Incorporated charities may be cleaner than other records. Contact addresses may differ from registered offices, and different company numbers are not proof of unrelated entities. The candidate cap can omit real matches. The tuned evaluation threshold is offline unless separately deployed and tested. Scores are not calibrated probabilities. The legacy `fsa_id` field is retained as a query ID for backwards compatibility.
+
+ElasticMQ is a local SQS-compatible emulator, not AWS. Review endpoints are unauthenticated and local-only; queue durability and snapshot reconciliation remain future work. The 85% coverage gate measures application `src`, not the separate data preparation/evaluation scripts; those scripts have focused tests. No production or cloud deployment claims.
+
+Sources: Charity Commission for England and Wales public register and Companies House Public Data API. See docs/DATA_GUIDE.md for source URLs, attribution and privacy precautions. Raw data, API keys and truth files remain private. This project began from a generated implementation baseline; subsequent testing, benchmarking and engineering decisions are documented in the Git history.
