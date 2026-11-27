@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import ValidationError
 from sqlalchemy import text
 from src.db import engine, init_db
-from src.matching import Record, CandidateIndex, score, decision, postcode_key
+from src.matching import Record, CandidateIndex, score, decision, postcode_key, name_key
 from src.queue import client, queue_url
 
 log = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ def process(job_id: str, payload: dict, index: CandidateIndex) -> None:
             status = decision(value)
             if status == 'no_match':
                 continue
-            conn.execute(text('INSERT INTO matches(fsa_id,company_id,name,postcode,score,status) VALUES (:f,:c,:n,:p,:s,:t) ON CONFLICT(fsa_id,company_id) DO NOTHING'), {'f':record.id,'c':candidate.id,'n':record.name,'p':postcode_key(record.postcode),'s':value,'t':status})
+            conn.execute(text('INSERT INTO matches(fsa_id,company_id,name,postcode,score,status,normalized_name) VALUES (:f,:c,:n,:p,:s,:t,:nn) ON CONFLICT(fsa_id,company_id) DO NOTHING'), {'f':record.id,'c':candidate.id,'n':record.name,'p':postcode_key(record.postcode),'s':value,'t':status,'nn':name_key(record.name)})
 
 
 class IndexCache:

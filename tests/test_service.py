@@ -35,7 +35,7 @@ def test_quarantine(database):
 
 def test_review(database):
     with database.begin() as conn:
-        conn.execute(text("INSERT INTO matches VALUES ('F','C','name','TN91AB',75,'review')"))
+        conn.execute(text("INSERT INTO matches(fsa_id,company_id,name,postcode,score,status,normalized_name) VALUES ('F','C','name','TN91AB',75,'review','name')"))
     with TestClient(api.app) as client:
         assert len(client.get('/review').json())==1
         assert client.post('/review/F/C',params={'status':'approved'}).status_code==200
@@ -84,3 +84,27 @@ def test_worker_empty_poll(database):
     cache = worker.IndexCache()
     assert worker.poll_once(Queue(), 'local', cache) == 0
     assert cache.builds == 0
+
+
+def test_normalized_prefix_search(database):
+    with database.begin() as conn:
+        conn.execute(text("INSERT INTO matches(fsa_id,company_id,name,postcode,score,status,normalized_name) VALUES ('F','C','ABC Foods Ltd','TN91AB',100,'auto_match','abc foods')"))
+    with TestClient(api.app) as client:
+        assert len(client.get('/business',params={'name':'ABC Foods Limited','postcode':'tn9 1ab'}).json()) == 1
+        assert len(client.get('/business',params={'name':'ABC','postcode':'TN91AB'}).json()) == 1
+        assert client.get('/business',params={'name':'Foods','postcode':'TN91AB'}).json() == []
+        assert client.get('/business',params={'name':'A_C','postcode':'TN91AB'}).json() == []
+        assert client.get('/business',params={'name':'!!!','postcode':'TN91AB'}).status_code == 422
+
+
+def test_existing_matches_migrate(tmp_path, monkeypatch):
+    eng = create_engine('sqlite:///' + str(tmp_path/'legacy.db'))
+    monkeypatch.setattr(db, 'engine', eng)
+    with eng.begin() as conn:
+        conn.execute(text('CREATE TABLE matches (fsa_id VARCHAR(100), company_id VARCHAR(100), name TEXT NOT NULL, postcode VARCHAR(20), score FLOAT NOT NULL, status VARCHAR(30) NOT NULL, PRIMARY KEY(fsa_id, company_id))'))
+        conn.execute(text("INSERT INTO matches VALUES ('F','C','ABC Foods Ltd','TN91AB',100,'auto_match')"))
+    db.init_db()
+    db.init_db()
+    with eng.connect() as conn:
+        assert conn.execute(text('SELECT normalized_name FROM matches')).scalar_one() == 'abc foods'
+    eng.dispose()
