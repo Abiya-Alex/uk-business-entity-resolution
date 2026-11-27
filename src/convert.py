@@ -1,6 +1,7 @@
+"""Convert downloaded Companies House CSV and FSA JSON into canonical regional CSVs."""
+
 from collections.abc import Iterator
 from typing import Any
-"""Convert downloaded Companies House CSV and FSA JSON into canonical regional CSVs."""
 import argparse
 import csv
 import json
