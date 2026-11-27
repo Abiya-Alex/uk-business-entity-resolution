@@ -30,3 +30,26 @@ def test_index():
 def test_evaluate():
     row=dict(a_name='ABC Foods Ltd',a_address='25 High St',a_postcode='TN9 1AB',b_name='ABC Foods Limited',b_address='25 High Street',b_postcode='TN9 1AB',label='1')
     assert evaluate([row])['f1']==1
+
+
+def test_prefix_stop_words_and_district():
+    idx = CandidateIndex([rec('1', 'The ABC Foods Limited'), rec('2', 'Other', postcode='TN9 2ZZ')])
+    assert [r.id for r in idx.candidates(rec('F', 'ABC Food Ltd'))] == ['1']
+    assert name_key('ＡＢＣ Foods Limited Ltd.') == 'abc foods'
+
+
+def test_candidate_cap_prioritizes_exact_postcode():
+    others = [rec(str(i), 'ABC Supplies', postcode='AB1 2CD') for i in range(250)]
+    target = rec('target', 'ABC Foods Ltd')
+    idx = CandidateIndex(others + [target], limit=10)
+    result = idx.candidates(rec('F'))
+    assert len(result) == 10
+    assert result[0].id == 'target'
+
+
+def test_evaluation_respects_candidate_cap():
+    row = dict(a_id='F', b_id='target', a_name='ABC Foods Ltd', a_address='25 High St',
+               a_postcode='TN9 1AB', b_name='ABC Foods Limited', b_address='25 High Street',
+               b_postcode='TN9 1AB', label='1')
+    idx = CandidateIndex([rec('first'), rec('target', 'ABC Foods Limited')], limit=1)
+    assert evaluate([row], idx)['fn'] == 1
