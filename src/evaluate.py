@@ -2,18 +2,24 @@
 import argparse
 import csv
 import json
-from src.matching import Record, score, decision, keys
+from src.matching import CandidateIndex, Record, score, decision, keys
 
 
-def evaluate(rows):
+def evaluate(rows, company_index: CandidateIndex | None = None):
     tp=fp=fn=tn=review=0
     for row in rows:
-        a=Record(id='a',name=row['a_name'],address=row['a_address'],postcode=row['a_postcode'])
-        b=Record(id='b',name=row['b_name'],address=row['b_address'],postcode=row['b_postcode'])
+        a=Record(id=row.get('a_id') or 'a',name=row['a_name'],address=row['a_address'],postcode=row['a_postcode'])
+        b=Record(id=row.get('b_id') or 'b',name=row['b_name'],address=row['b_address'],postcode=row['b_postcode'])
         truth=row['label'].strip()
         if truth not in {'0','1'}:
             raise ValueError('Every label must be 0 or 1')
-        result=decision(score(a,b)) if keys(a)&keys(b) else 'no_match'
+        if company_index is not None:
+            if not row.get('b_id'):
+                raise ValueError('b_id is required when evaluating with the company corpus')
+            eligible = any(candidate.id == b.id for candidate in company_index.candidates(a))
+        else:
+            eligible = bool(keys(a) & keys(b))
+        result=decision(score(a,b)) if eligible else 'no_match'
         pred=result=='auto_match'
         review+=result=='review'
         tp+=pred and truth=='1'; fp+=pred and truth=='0'
@@ -23,6 +29,10 @@ def evaluate(rows):
     return dict(tp=tp,fp=fp,fn=fn,tn=tn,review=review,precision=p,recall=r,f1=2*p*r/(p+r) if p+r else 0)
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(); parser.add_argument('labels'); args=parser.parse_args()
+    parser=argparse.ArgumentParser(); parser.add_argument('labels'); parser.add_argument('--companies', help='Canonical company CSV for full candidate filtering'); args=parser.parse_args()
+    index = None
+    if args.companies:
+        from src.sample_pairs import records
+        index = CandidateIndex(records(args.companies))
     with open(args.labels,encoding='utf-8-sig',newline='') as f:
-        print(json.dumps(evaluate(csv.DictReader(f)),indent=2))
+        print(json.dumps(evaluate(csv.DictReader(f), index),indent=2))

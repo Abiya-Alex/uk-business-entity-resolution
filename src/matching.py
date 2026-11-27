@@ -1,5 +1,6 @@
 """Deterministic candidate generation and scoring; scores are not probabilities."""
 import re
+import unicodedata
 from collections import defaultdict
 from typing import Iterable
 from pydantic import BaseModel, Field
@@ -13,11 +14,12 @@ class Record(BaseModel):
 
 
 def normalize(value: str) -> str:
-    return ' '.join(re.sub(r'[^\w\s]', ' ', value.casefold()).split())
+    value = unicodedata.normalize('NFKC', value).casefold()
+    return ' '.join(re.sub(r'[^\w\s]', ' ', value).split())
 
 
 def name_key(value: str) -> str:
-    return re.sub(r'\b(limited|ltd|plc|llp)$', '', normalize(value)).strip()
+    return re.sub(r'(?:\b(?:limited|ltd|plc|llp)\s*)+$', '', normalize(value)).strip()
 
 
 def postcode_key(value: str) -> str:
@@ -28,22 +30,53 @@ def address_key(value: str) -> str:
     return re.sub(r'\b(st|rd|ave)\b', lambda m: {'st':'street','rd':'road','ave':'avenue'}[m[0]], normalize(value))
 
 
+STOP_WORDS = {'the', 'and', 'of', 'a', 'an'}
+MAX_CANDIDATES = 200
+
+
+def name_prefix(value: str) -> str:
+    return next((token[:4] for token in name_key(value).split() if token not in STOP_WORDS), '')
+
+
 def keys(record: Record) -> set[str]:
+    """Multiple blocking passes; exact postcode and name/district are stronger."""
     p = postcode_key(record.postcode)
-    n = name_key(record.name).split()
-    return ({'p:'+p[:-3]} if len(p)>3 else set()) | ({'n:'+n[0]} if n else set())
+    prefix = name_prefix(record.name)
+    found = {'p:' + p} if len(p) > 3 else set()
+    if prefix:
+        found.add('n:' + prefix)
+        if len(p) > 3:
+            found.add('pn:' + p[:-3] + ':' + prefix)
+    return found
 
 
 class CandidateIndex:
-    def __init__(self, records: Iterable[Record]):
+    def __init__(self, records: Iterable[Record], limit: int = MAX_CANDIDATES):
+        if limit < 1:
+            raise ValueError('Candidate limit must be positive')
+        self.limit = limit
         self.index: dict[str, list[Record]] = defaultdict(list)
         for record in records:
             for key in keys(record):
                 self.index[key].append(record)
 
     def candidates(self, record: Record) -> list[Record]:
-        found = {r.id:r for k in keys(record) for r in self.index.get(k, [])}
-        return [found[k] for k in sorted(found)]
+        # Exact postcode and prefix+district beat the global prefix fallback.
+        # Cap expensive scoring, not the initial bucket lookups.
+        found: dict[str, Record] = {}
+        for key in sorted(keys(record), key=lambda k: (0 if k.startswith('p:') else 1 if k.startswith('pn:') else 2, k)):
+            for candidate in self.index.get(key, []):
+                found[candidate.id] = candidate
+        p = postcode_key(record.postcode)
+        prefix = name_prefix(record.name)
+        def rank(candidate: Record) -> tuple[bool, bool, bool, str]:
+            cp = postcode_key(candidate.postcode)
+            same_prefix = bool(prefix and prefix == name_prefix(candidate.name))
+            same_postcode = bool(p and p == cp)
+            same_district = bool(len(p) > 3 and p[:-3] == cp[:-3])
+            return (not (same_postcode and same_prefix), not same_postcode,
+                    not (same_prefix and same_district), candidate.id)
+        return sorted(found.values(), key=rank)[:self.limit]
 
 
 def score(a: Record, b: Record) -> float:
