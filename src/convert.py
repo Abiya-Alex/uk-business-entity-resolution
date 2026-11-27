@@ -1,4 +1,7 @@
 """Convert downloaded Companies House CSV and FSA JSON into canonical regional CSVs."""
+
+from collections.abc import Iterator
+from typing import Any
 import argparse
 import csv
 import json
@@ -10,6 +13,7 @@ def convert(source: str, target: str, kind: str, areas: list[str]) -> int:
     with open(source, encoding='utf-8-sig', newline='') as inp, open(target, 'w', encoding='utf-8', newline='') as out:
         writer = csv.DictWriter(out, fieldnames=['id','name','address','postcode'])
         writer.writeheader()
+        rows: Iterator[dict[str, Any]]
         if kind == 'companies':
             rows = ({k.strip():v for k,v in row.items()} for row in csv.DictReader(inp))
         else:
