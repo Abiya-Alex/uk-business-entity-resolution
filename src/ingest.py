@@ -39,7 +39,7 @@ def import_companies(path: str) -> tuple[int, int]:
     return accepted, rejected
 
 
-def enqueue_fsa(path: str, sqs: Any, url: str) -> int:
+def enqueue_records(path: str, sqs: Any, url: str) -> int:
     count = 0
     with open(path, encoding='utf-8-sig', newline='') as stream:
         for row in csv.DictReader(stream):
@@ -57,13 +57,13 @@ def enqueue_fsa(path: str, sqs: Any, url: str) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('companies')
-    parser.add_argument('fsa')
+    parser.add_argument('records', help='Canonical query records (charities or legacy demo)')
     args = parser.parse_args()
     init_db()
     accepted, rejected = import_companies(args.companies)
     sqs = client()
-    queued = enqueue_fsa(args.fsa, sqs, queue_url(sqs))
-    print(f'Companies accepted: {accepted}; rejected: {rejected}; FSA jobs queued: {queued}')
+    queued = enqueue_records(args.records, sqs, queue_url(sqs))
+    print(f'Companies accepted: {accepted}; rejected: {rejected}; Query jobs queued: {queued}')
 
 
 if __name__ == '__main__':

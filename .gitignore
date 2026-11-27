@@ -9,3 +9,13 @@ __pycache__/
 results/
 data/raw/
 data/real/
+
+# Phase C private data (keep outside repository)
+phase-c-charity-data/
+**/truth.csv
+**/charities.csv
+**/companies.csv
+**/errors-private.csv
+**/retrieval_failures.csv
+**/tuning.json
+*.sqlite3
