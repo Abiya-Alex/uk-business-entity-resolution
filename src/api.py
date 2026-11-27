@@ -8,7 +8,7 @@ from fastapi.responses import Response, JSONResponse
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from sqlalchemy import text
 from src.db import engine, init_db
-from src.matching import postcode_key
+from src.matching import postcode_key, name_key
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -52,8 +52,13 @@ def metrics():
 
 @app.get('/business')
 def search(name: str = Query(min_length=1,max_length=200), postcode: str = Query(min_length=3,max_length=20)):
+    normalized = name_key(name)
+    if not normalized:
+        raise HTTPException(422, 'Business name is empty after normalization')
+    # Escape SQL LIKE metacharacters; only the final percent is a wildcard.
+    prefix = normalized.replace('!', '!!').replace('%', '!%').replace('_', '!_') + '%'
     with engine.connect() as conn:
-        rows = conn.execute(text("SELECT * FROM matches WHERE postcode=:p AND lower(name) LIKE :n AND status IN ('auto_match','approved') ORDER BY score DESC LIMIT 50"), {'p':postcode_key(postcode),'n':'%'+name.lower()+'%'}).mappings()
+        rows = conn.execute(text("SELECT fsa_id, company_id, name, postcode, score, status FROM matches WHERE postcode=:p AND normalized_name LIKE :n ESCAPE '!' AND status IN ('auto_match','approved') ORDER BY score DESC LIMIT 50"), {'p':postcode_key(postcode),'n':prefix}).mappings()
         return [dict(row) for row in rows]
 
 @app.get('/review')
