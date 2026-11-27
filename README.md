@@ -25,7 +25,7 @@ docker compose ps
 docker compose exec api python -m src.ingest data/companies_demo.csv data/fsa_demo.csv
 docker compose logs --tail=50 worker
 ```
-Open http://localhost:8000/docs and call GET /business with name ABC and postcode TN9 1AB. Expected synthetic demo result: F1/C1, score 100. Open http://localhost:3000 (default local admin/admin, change when prompted), dashboard Business API. Prometheus: http://localhost:9090. Stop with `docker compose down` (database persists); `docker compose down -v` destroys database volume. Queue is ephemeral in this demo. Never expose these local services to the internet.
+Open http://localhost:8000/docs and call GET /business with name ABC and postcode TN9 1AB. Expected synthetic demo result: F1/C1, score 100. Open http://localhost:3001 (default local admin/admin, change when prompted), dashboard Business API. Prometheus: http://localhost:9090. Stop with `docker compose down` (database persists); `docker compose down -v` destroys database volume. Queue is ephemeral in this demo. Never expose these local services to the internet.
 
 ## Local development
 ```powershell
