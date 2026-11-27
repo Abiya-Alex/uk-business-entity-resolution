@@ -1,0 +1,30 @@
+﻿{
+  "dataset": "Synthetic stress workload: shared leading stop word; known positive for each query",
+  "python": "3.12.10",
+  "platform": "Windows",
+  "baseline_commit": "09904bf27fdc4fb51f119dddd9a2de10036ed9d9",
+  "current_commit": "802c27e2d7a07458d2f1c8b81ca7f314339520ab",
+  "records": 5000,
+  "queries": 20,
+  "before": {
+    "index_build_ms": 69.327,
+    "candidate_pairs": 100000,
+    "blocking_recall_known_synthetic_pairs": 1.0,
+    "candidate_generation_and_scoring_ms": 4904.782
+  },
+  "after": {
+    "index_build_ms": 74.032,
+    "candidate_pairs": 4000,
+    "blocking_recall_known_synthetic_pairs": 1.0,
+    "candidate_generation_and_scoring_ms": 127.459
+  },
+  "candidate_reduction": 0.96,
+  "index_cache_sqlite": {
+    "unchanged_poll_count": 10,
+    "baseline_rebuilds": 10,
+    "actual_cached_builds": 1,
+    "baseline_ms": 986.176,
+    "cached_ms": 84.251
+  },
+  "limitations": "One run; timings depend on machine and workload. Synthetic recall is not real-data accuracy."
+}
