@@ -1,0 +1,43 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.2.0, pluggy-1.7.0
+rootdir: C:\AI\uk-business-resolution
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.16.0, locust-2.47.0, cov-7.1.0
+collected 32 items
+
+tests\test_charity_conversion.py .                                       [  3%]
+tests\test_charity_diagnostics.py .....                                  [ 18%]
+tests\test_charity_evaluation.py .                                       [ 21%]
+tests\test_company_fetch.py .                                            [ 25%]
+tests\test_data.py ...                                                   [ 34%]
+tests\test_ingest.py ..                                                  [ 40%]
+tests\test_matching.py ...........                                       [ 75%]
+tests\test_service.py ........                                           [100%]
+
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  C:\AI\uk-business-resolution\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== tests coverage ================================
+______________ coverage: platform win32, python 3.12.10-final-0 _______________
+
+Name                  Stmts   Miss  Cover   Missing
+---------------------------------------------------
+src\__init__.py           0      0   100%
+src\api.py               66      3    95%   31, 34, 36
+src\convert.py           28      2    93%   35-36
+src\db.py                23      2    91%   11, 27
+src\evaluate.py          33      9    73%   15, 18, 32-38
+src\ingest.py            57      3    95%   48-49, 70
+src\matching.py          63      1    98%   56
+src\profile_data.py      17      1    94%   20
+src\queue.py              7      1    86%   7
+src\sample_pairs.py      34      3    91%   30, 33, 41
+src\worker.py            75     14    81%   28, 55, 77-87, 90
+---------------------------------------------------
+TOTAL                   403     39    90%
+Required test coverage of 85% reached. Total coverage: 90.32%
+======================== 32 passed, 1 warning in 6.62s ========================

@@ -48,3 +48,37 @@ Official company numbers provide reference labels; the query matcher does not se
 ElasticMQ is a local SQS-compatible emulator, not AWS. Review endpoints are unauthenticated and local-only; queue durability and snapshot reconciliation remain future work. The 85% coverage gate measures application `src`, not the separate data preparation/evaluation scripts; those scripts have focused tests. No production or cloud deployment claims.
 
 Sources: Charity Commission for England and Wales public register and Companies House Public Data API. See docs/DATA_GUIDE.md for source URLs, attribution and privacy precautions. Raw data, API keys and truth files remain private. This project began from a generated implementation baseline; subsequent testing, benchmarking and engineering decisions are documented in the Git history.
+
+## Real-world evaluation
+
+The service was evaluated using official Charity Commission
+and Companies House records, with company registration
+numbers reserved as reference labels.
+
+| Metric | Result |
+|---|---:|
+| Charity register records profiled | 397,443 |
+| Charity queries | 5,000 |
+| Company candidates | 8,165 |
+| Held-out queries | 2,000 |
+| Precision | 91.55% |
+| Recall | 94.30% |
+| F1 score | 92.91% |
+| Blocking recall | 99.00% |
+| Candidate reduction | 99.86% |
+| Synthetic corruption F1 | 88.08% |
+
+Candidate blocking reduced 16,330,000 exhaustive
+comparisons to 22,195 while preserving reference-link recall.
+
+The local asynchronous pipeline processed all 5,000 queries
+with zero quarantined records and no remaining dead-letter messages.
+
+Automated feature-level diagnostics analysed all 194 error entries.
+
+Results describe a controlled candidate-pool experiment.
+The tuned threshold was evaluated offline.
+No nationwide production accuracy is claimed.
+
+See [Evaluation Results](docs/RESULTS.md) for methodology,
+baselines, diagnostics, confidence intervals and limitations.
